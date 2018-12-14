@@ -6,13 +6,32 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import iso_levels
+import stats
 
 # the plotly stuff is missing here
 
-def plot_contour_levels_stat(levels_lst, pdf_lst, labels):
+
+DEFAULT_LABELS = ['old', 'vertical', 'horizontal']  # default strings to use for labelling the plots
+
+
+def plot_contour_levels_stat(levels_lst, pdf_lst, labels=DEFAULT_LABELS):
+    """
+
+    Args:
+        levels_lst : sequence of numbers.
+            the sequence of contour levels.
+        pdf_lst : sequence of data arrays.
+            the data array to draw a contour plot for.
+        labels : sequence of strings, optional.
+            String to use for labelling the plot.
+
+    Returns:
+         Nothing.
+    """
+
     # return that all contour levels have equal probability
 
-    if (len(levels_lst) != len(pdf_lst) or len(levels_lst) != len(labels)):
+    if len(levels_lst) != len(pdf_lst) or len(levels_lst) != len(labels):
         raise ValueError("All arguments must be sequences of equal length.")
 
     # k levels cut the prob values into k+1 subsets
@@ -20,38 +39,44 @@ def plot_contour_levels_stat(levels_lst, pdf_lst, labels):
     fig, ax = plt.subplots(figsize=(4 * n, 2), nrows=1, ncols=n)
 
     for i, (levels, pdf) in enumerate(zip(levels_lst, pdf_lst)):
-        levels = levels.tolist()
 
-        # probability weight per level
-        sum_prob = np.zeros(len(levels) + 1)
-        for p in pdf.flatten():
-            idx = np.searchsorted(levels, p, side='left')
-            sum_prob[idx] += p
+        sum_prob = stats.contour_level_weight(levels, pdf)
 
-        # print(sum_prob)
-        # print(levels+[1])
         level_labels = ['L' + str(i + 1) for i in range(len(levels) + 1)]
         ax[i].bar(level_labels, sum_prob)
         ax[i].set_title(labels[i])
 
 
-def contour_comparision_plot_2d(x, y, pdf, levels_lst, labels=['old', 'new']):
+def contour_comparision_plot_2d(levels_lst, pdf, x=None, y=None, labels=DEFAULT_LABELS):
     """Plot a comparative plot of samples of a two dimensional quantitative function using two different
     contour level sets.
 
     Args:
-        x : sequence of numbers
-        y : sequence of numbers
+        x : sequence of numbers, optional.
+        y : sequence of numbers, optional.
             x and y together form the grid of input values where pdf provides function values.
+            It must be either both, x and y be given, or none of them. If both are given it must match the shape of pdf.
         pdf : sequence of numbers
             values of the function to plot at all gridpoints of x and y
         levels_lst : a list of two lists of numbers.
             list of the contour levels.
     """
     n = len(levels_lst)
-    pdf = pdf.reshape(len(x), len(y))
 
-    # [levels_pdf, levels_prob] = levels_lst
+    pdf = np.asarray(pdf)
+
+    if x is None and y is None:
+        # pdf must be 2d or square
+        if len(pdf.shape) == 2 and pdf.shape[0] == pdf.shape[1]:
+            pass
+        else:
+            s = pdf.shape[0] ** 0.5
+            if s ** 0.5 == int(s ** 0.5):
+                pdf.reshape(s,s)
+            else:
+                raise ValueError('cannot infer shape of flattened data array pdf ')
+
+    pdf = pdf.reshape(len(x), len(y))
 
     fig, ax = plt.subplots(figsize=(4 * n, 4), nrows=1, ncols=n)
 
@@ -59,16 +84,10 @@ def contour_comparision_plot_2d(x, y, pdf, levels_lst, labels=['old', 'new']):
         axis.contour(x, y, pdf, levels=levels)
         axis.set_title(label)
 
-    #     ax[0].contour(x, y, pdf, levels=levels)
-    #     ax[0].set_title(labels[0])
-
-    #     ax[1].contour(x, y, pdf, levels=levels)
-    #     ax[1].set_title(labels[1])
-
     plt.show()
 
 
-def plot_combined(x, y, p, k=10):
+def plot_combined(x, y, p, k=iso_levels.DEFAULT_K):
     """plot both, contour level stats, and the actual contour plots"""
     p = p.flatten()
 
@@ -87,12 +106,10 @@ def plot_combined(x, y, p, k=10):
         prob_hori_lvls = [iso_levels.equi_horizontal_prob_per_level(p, k)]
         k = [k]
 
-    # plot stuff
+    # plot
     for i, ki in enumerate(k):
         plot_contour_levels_stat([pdf_lvls[i], prob_lvls[i], prob_hori_lvls[i]], [p, p ,p],
                                  [s.format(ki) for s in ['old (k={})', 'vertical (k={})', 'horizonal (k={})']])
-        # ['old (k={})'.format(ki), 'vertical (k={})'.format(ki), 'horizonal (k={})'.format(ki)])
     for i, ki in enumerate(k):
         contour_comparision_plot_2d(x, y, p, [pdf_lvls[i], prob_lvls[i], prob_hori_lvls[i]],
                                     [s.format(ki) for s in ['old (k={})', 'vertical (k={})', 'horizonal (k={})']])
-        # ['old (k={})'.format(ki), 'new (k={})'.format(ki)])

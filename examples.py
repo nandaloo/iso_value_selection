@@ -1,5 +1,12 @@
 """
 Copyright 2018 Philipp Lucas, philipp.lucas@dlr.de
+
+A collection of functions that generate a 2d support over example probability density functions.
+
+In general these functions return:
+
+  * a 2d array of density values
+
 """
 
 import itertools
@@ -12,16 +19,28 @@ import plotting
 
 #### helpers to construct distributions and the like ####
 
-def gauss(x):
+DEFAULT_N = 50
+
+
+def pdf_gauss_1d(x):
+    """Returns the density of the univariate normal distribution at point x."""
     return norm.pdf(x)
 
-def gauss_2d(x, y):
-    return gauss(x)*gauss(y)
-    #return multivariate_normal.pdf([x,y])
+
+def pdf_gauss_2d(x, y):
+    """Returns the density of the bivariate normal distribution at point (x,y)."""
+    return pdf_gauss_1d(x)*pdf_gauss_1d(y)
 
 
-def gaussian_support(mu=[0.0, 0.0], sigma=[[1.0, 0], [0, 1]], n=100):
-    """generate data for a multivariate gaussian"""
+def support_gaussian_2d(mu=[0.0, 0.0], sigma=[[1.0, 0], [0, 1]], n=DEFAULT_N):
+    """Generate support data for a specified multivariate gaussian and n steps along all dimensions.
+
+    Returns:
+        dict of x, y and pdf, where x and y are the grid axis support points and pdf the support points.
+    """
+
+    assert(len(mu) == len(sigma) == 2)
+
     pos = utils.grid_points(n)
     rv = multivariate_normal(mu, sigma)
 
@@ -32,18 +51,27 @@ def gaussian_support(mu=[0.0, 0.0], sigma=[[1.0, 0], [0, 1]], n=100):
     }
 
 
-
 def kde_kernel(data, kernel_bandwidth=None):
+    """Given data return a gaussian kernel density estimator.
+
+    Args:
+        data : the data
+        kernel_bandwidth : see scipy.stats.gaussian_kde arguments
+    """
     return gaussian_kde(data, bw_method=kernel_bandwidth)
 
 
-def kde_support(kernel, n=20):
-    """generate data for a kernel estimate
+def support_kde(kernel, n=DEFAULT_N):
+    """Generate data for a kernel estimator `kernel`.
+
+    Args:
+        kernel : a kernel density estimator like scipy.stats.gaussian_kde arguments
+        n : number of support points per axis
     """
     x = np.linspace(0, 1, n)
     y = np.linspace(0, 1, n)
-    gridpoints = np.array(list(itertools.product(x, y))).transpose()
-    pdf = kernel.evaluate(gridpoints)
+    grid_points = np.array(list(itertools.product(x, y))).transpose()
+    pdf = kernel.evaluate(grid_points)
 
     return {
         'x': x,
@@ -363,7 +391,7 @@ def iris_kde():
     X = utils.normalize_data(X)
     mykernel = kde_kernel(X)
 
-    kde1 = kde_support(mykernel)
+    kde1 = support_kde(mykernel)
     plotting.plot_combined(kde1['x'], kde1['y'], kde1['pdf'], k=[3, 5, 7, 10])
 
 
