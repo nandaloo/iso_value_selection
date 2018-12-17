@@ -11,7 +11,7 @@ import pandas as pd
 DEFAULT_K = 5  # default number of contour lines
 
 
-def _check_data(data):
+def _validate_normalize_data(data):
     """Check for data consistency, format and other required properties."""
     data = np.asarray(data)
     if len(data.shape) > 1 and data.shape[0] != data.shape[1]:
@@ -26,9 +26,16 @@ def _check_data(data):
     return data
 
 
-def _check_levels(levels):
+def _validate_normalize_levels(levels, remove_double_levels=False):
     """Sanity check for levels."""
+
+    # if they are not ordered then something is wrong
     assert(np.all(np.diff(levels) >= 0))
+
+    # but it may happen that values occur twice: remove them
+    if remove_double_levels:
+        levels = np.unique(levels)
+
     return levels
 
 
@@ -46,10 +53,10 @@ def equi_value(data, k=DEFAULT_K):
 
     Returns:
         A sequence of k levels in increasing order.
-        """
-    data = data.flatten()
+    """
+    data = _validate_normalize_data(data)
     levels = np.linspace(np.min(data), np.max(data), k+2)[1:-1]
-    return _check_levels(levels)
+    return _validate_normalize_levels(levels)
 
 
 def equi_prob_per_level(data, k=DEFAULT_K):
@@ -72,7 +79,7 @@ def equi_prob_per_level(data, k=DEFAULT_K):
 
     """
 
-    pdf = _check_data(data)
+    pdf = _validate_normalize_data(data)
 
     # convert to normalized probabilities
     # this assumes a linearly selected support!
@@ -95,7 +102,7 @@ def equi_prob_per_level(data, k=DEFAULT_K):
 
     # pdf values are the contour level values
     levels = df.pdf.iloc[indices].values
-    return _check_levels(levels)
+    return _validate_normalize_levels(levels)
 
 
 def equi_horizontal_prob_per_level(data, k=DEFAULT_K):
@@ -119,7 +126,7 @@ def equi_horizontal_prob_per_level(data, k=DEFAULT_K):
         A sequence of k levels in increasing order.
     """
 
-    pdf = _check_data(data)
+    pdf = _validate_normalize_data(data)
 
     # 1. get level targets
     level_targets = np.linspace(0, 1, k + 2)[1:-1]
@@ -129,6 +136,7 @@ def equi_horizontal_prob_per_level(data, k=DEFAULT_K):
 
     # 3. get (unnormalized) weight for each slice (i.e. each increase in density)
     # this is: (increase in p compared to previous p)*(number of p values equal or larger than p)
+
     # get neighboring difference
     pdf_shift = np.roll(pdf_sorted, 1)
     pdf_shift[0] = 0
@@ -151,7 +159,7 @@ def equi_horizontal_prob_per_level(data, k=DEFAULT_K):
 
     # 7. get density levels
     levels = pdf_sorted[indices]
-    return _check_levels(levels)
+    return _validate_normalize_levels(levels)
 
 
 if __name__ == '__main__':
