@@ -6,6 +6,14 @@ import pandas as pd
 DEFAULT_N = 50  # default number of support points along one axis
 DEFAULT_D = 2  # default number of dimensions when creating support indexes dimension
 
+
+def crossing_indexes(levels, p):
+    """Return the indexes of values in p that are the first to exceed each of the levels in levels."""
+    p = np.sort(p.flatten())
+    levels = np.sort(levels)
+    return np.searchsorted(p, levels)
+
+
 def normalize_to_indexes(indexes=None, x=None, y=None, z=None, shape=None, d=None, n=None, low=None, high=None, data=None):
     """Get index sequences x and y from a flexible set of parameters.
 

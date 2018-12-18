@@ -7,14 +7,13 @@ import matplotlib.pyplot as plt
 
 import iso_levels
 import stats
-
-# the plotly stuff is missing here
+import utils
 
 
 DEFAULT_LABELS = ['old', 'vertical', 'horizontal']  # default strings to use for labelling the plots
 
 
-def _validate_infer_indexes(pdf, x, y):
+def _validate_infer_indexes(pdf, x, y, indexes=None):
     """Validate and normalize the the input.
 
     Given an array of 2d function values over an assumed grid of points and potentially the grid points, it normalizes
@@ -33,6 +32,12 @@ def _validate_infer_indexes(pdf, x, y):
     """
 
     pdf = np.asarray(pdf)
+
+    if indexes is not None:
+        if len(indexes) > 0:
+            x = indexes[0]
+        if len(indexes) > 1:
+            y = indexes[1]
 
     if x is None and y is None:
         if len(pdf.shape) == 2:
@@ -63,6 +68,63 @@ def _validate_infer_indexes(pdf, x, y):
     return pdf, x, y
 
 
+def add_level_lines(levels, ax, **kwargs):
+    """Adds horizontal level lines to given axis."""
+    # ax.axhline(0)
+    for lvl in levels:
+        ax.axhline(lvl, **kwargs)
+
+
+def add_cross_lines(levels, p, ax, **kwargs):
+    """Adds vertical cross lines to given axis.
+    See also utils.crossing_indexes.
+    """
+    crossings = utils.crossing_indexes(levels, p)
+    for v in crossings:
+        ax.axvline(v, **kwargs)
+
+
+def plot_density(levels, p, ax=None):
+    """Plot sorted density `p` augmented with:
+      * horizontal lines at each of the levels
+      * vertical lines where the level lines cross the density plot
+    """
+    p = p.flatten()
+    p_sorted = np.sort(p)
+
+    if ax is None:
+        figure = plt.figure()
+        ax = figure.add_subplot(111)
+
+    ax.set_title("density")
+    ax.axhline(0, color='grey', lw=0.5)
+    add_level_lines(levels, ax, color='black', lw=0.5)
+    add_cross_lines(levels, p_sorted, ax, color='black', lw=0.5, dashes=[2, 6])
+
+    ax.step(np.arange(p.size), p_sorted)
+
+
+def plot_cumulative_density(levels, p, ax=None):
+    """Plot cumulative density of sorted density values `p`.
+    The plot is augmented with vertical lines at the indexes of those p values are bounding the provided levels.
+    """
+    p = p.flatten()
+    p_sorted = np.sort(p)
+    p_cumsum = np.cumsum(p_sorted)
+
+    level_cross_idx = utils.crossing_indexes(levels, p_sorted)
+
+    if ax is None:
+        figure = plt.figure()
+        ax = figure.add_subplot(111)
+
+    ax.set_title("cumulative density")
+    ax.axhline(0, color='grey', lw=0.5)
+    add_cross_lines(levels, p, ax, color='black', lw=0.5, dashes=[2, 6])
+
+    ax.step(np.arange(p.size), p_cumsum)
+
+
 def contour(p, x, y, ax=None):
     """Draw contour plot over p, x, y.
 
@@ -72,6 +134,7 @@ def contour(p, x, y, ax=None):
         fig = plt.figure()
         ax = fig.add_subplot(111)
     ax.contour(x, y, p)
+
 
 def plot_contour_levels_stat(levels_lst, pdf_lst, labels=DEFAULT_LABELS):
     """
@@ -105,7 +168,7 @@ def plot_contour_levels_stat(levels_lst, pdf_lst, labels=DEFAULT_LABELS):
         ax[i].set_title(labels[i])
 
 
-def contour_comparision_plot_2d(levels_lst, pdf, x=None, y=None, labels=DEFAULT_LABELS):
+def contour_comparision_plot_2d(levels_lst, pdf, x=None, y=None, indexes=None, labels=DEFAULT_LABELS):
     """Create and show comparative contour plots of a two dimensional quantitative function using different contour
     level sets.
 
@@ -121,23 +184,23 @@ def contour_comparision_plot_2d(levels_lst, pdf, x=None, y=None, labels=DEFAULT_
             list of the contour levels.
     """
 
-    pdf, x, y = _validate_infer_indexes(pdf, x, y)
+    pdf, x, y = _validate_infer_indexes(pdf, x, y, indexes)
 
     n = len(levels_lst)
     fig, ax = plt.subplots(figsize=(4 * n, 4), nrows=1, ncols=n)
 
     for i, (axis, label, levels) in enumerate(zip(ax, labels, levels_lst)):
-        print(levels)
-        axis.contour(x, y, pdf, levels=levels)
+        #print('levels ({}): {}'.format(label, levels))
+        axis.contour(x, y, pdf, levels=np.unique(levels))
         axis.set_title(label)
 
     plt.show()
 
 
-def plot_combined(p, x=None, y=None, k=iso_levels.DEFAULT_K):
+def plot_combined(p, x=None, y=None, indexes=None, k=iso_levels.DEFAULT_K):
     """Plot both, contour level stats, and the actual contour plots."""
 
-    p, x, y = _validate_infer_indexes(p, x, y)
+    p, x, y = _validate_infer_indexes(p, x, y, indexes)
 
     # generate levels
     try:
@@ -159,9 +222,9 @@ def plot_combined(p, x=None, y=None, k=iso_levels.DEFAULT_K):
         levels = [pdf_lvls[i], prob_lvls[i], prob_hori_lvls[i]]
         plot_contour_levels_stat(levels,
                                  len(levels)*[p],
-                                 [s.format(ki) for s in ['old (k={})', 'vertical (k={})', 'horizonal (k={})']])
+                                 labels=[s.format(ki) for s in ['old (k={})', 'vertical (k={})', 'horizonal (k={})']])
     for i, ki in enumerate(k):
         contour_comparision_plot_2d([pdf_lvls[i], prob_lvls[i], prob_hori_lvls[i]],
                                     p,
                                     x, y,
-                                    [s.format(ki) for s in ['old (k={})', 'vertical (k={})', 'horizonal (k={})']])
+                                    labels=[s.format(ki) for s in ['old (k={})', 'vertical (k={})', 'horizonal (k={})']])
