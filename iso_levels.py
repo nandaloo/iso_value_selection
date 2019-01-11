@@ -115,6 +115,9 @@ def equi_prob_per_level(data, k=DEFAULT_K):
 
     # choose iso value as the mid value between the exceeding pdf value and the previous one (if exists)
     #  advantage: iso value never collides with actual data value
+
+    # TODO: find first lower index with lower value
+
     indices_previous = [0 if i == 0 else i-1 for i in indices]
 
     # pdf values are the contour level values

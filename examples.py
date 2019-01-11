@@ -170,6 +170,10 @@ def iris_kde(kernel_bandwidth=None):
 
 
 def basic_idea():
+    """Creates plot for initial explanatory and motivating example for paper.
+
+    Also provide some search capapbilities, i.e. allows to play with parameters to find exemplary distributions.
+    """
     import operator
     from matplotlib import pyplot as plt
 
@@ -219,12 +223,11 @@ def basic_idea():
 
 if __name__ == '__main__':
 
-    iris_kde(0.15)
-    gaussian_2d_plain()
-    gaussian_2d_central_splike()
-    gaussian_2d_shifted_spike()
-    gausssian_2d_three_gaussians()
-    allbus()
-    titanic()
-
-    # basic_idea()
+    # iris_kde(0.15)
+    # gaussian_2d_plain()
+    # gaussian_2d_central_splike()
+    # gaussian_2d_shifted_spike()
+    # gausssian_2d_three_gaussians()
+    # allbus()
+    # titanic()
+    basic_idea()

@@ -180,7 +180,9 @@ def contour(p, x, y, levels=None, ax=None, **kwargs):
     if ax is None:
         fig = plt.figure()
         ax = fig.add_subplot(111)
-    ax.contour(x, y, p, levels=np.unique(levels), **kwargs)
+    if levels is not None:
+        levels = np.unique(levels)
+    ax.contour(x, y, p, levels=levels, **kwargs)
     return ax
 
 
@@ -220,7 +222,6 @@ def plot_contour_levels_stats(levels_lst, pdf_lst, labels=DEFAULT_LABELS):
 
     for i, (levels, pdf) in enumerate(zip(levels_lst, pdf_lst)):
         contour_levels_stat(levels, pdf, ax[i])
-        sum_prob = stats.contour_level_weight(levels, pdf)
         ax[i].set_title(labels[i])
     return ax
 
