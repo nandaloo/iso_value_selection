@@ -4,6 +4,7 @@ Copyright 2018 Philipp Lucas, philipp.lucas@dlr.de
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 import iso_levels
 import stats
@@ -11,6 +12,28 @@ import utils
 
 
 DEFAULT_LABELS = ['old', 'vertical', 'horizontal']  # default strings to use for labelling the plots
+
+cfg = {
+    'isoline.dash': [6, 2],
+    'isoline.color': 'grey',
+    'isoline.width': 0.75,
+    
+    'crossline.dash': [2, 2],
+    'crossline.color': 'grey',
+    'crossline.width': 0.5,
+    'crossline.draw_limiting': True,
+    
+    'zeroline.dash': [2, 0],
+    'zeroline.color': 'grey',
+    'zeroline.width': 1,
+    'zeroline.draw': True,
+}
+
+
+def _add_zeroline(ax):
+    if cfg['zeroline.draw']:
+        ax.axhline(0, color=cfg['zeroline.color'], lw=cfg['zeroline.width'], dashes=cfg['zeroline.dash'])
+    return ax
 
 
 def _validate_infer_indexes(pdf, x, y, indexes=None):
@@ -40,21 +63,23 @@ def _validate_infer_indexes(pdf, x, y, indexes=None):
             y = indexes[1]
 
     if x is None and y is None:
-        if len(pdf.shape) == 2:
-            pass
+        shape = pdf.shape
+        if len(shape) == 2:
+            lx, ly = shape
 
-        elif len(pdf.shape) == 1:
+        elif len(shape) == 1:
             # pdf must be square-able
-            s = int(pdf.shape[0] ** 0.5)
-            if s ** 2 == pdf.shape[0]:
+            s = int(shape[0] ** 0.5)
+            if s ** 2 == shape[0]:
                 pdf.shape = s, s
             else:
                 raise ValueError('Cannot infer shape of flattened data array pdf since it does not have a square '
                                  'number of elements.')
+            lx, ly = s, s
 
         # reconstruct x and y from shape
-        x = np.linspace(0, 1, s)
-        y = np.linspace(0, 1, s)
+        x = np.linspace(0, 1, lx)
+        y = np.linspace(0, 1, ly)
 
     elif (x is None and y is not None) or (x is not None and y is None):
         raise TypeError('x and y must be both set or both unset')
@@ -71,8 +96,9 @@ def _validate_infer_indexes(pdf, x, y, indexes=None):
 def add_level_lines(levels, ax, **kwargs):
     """Adds horizontal level lines to given axis."""
     # ax.axhline(0)
+
     for lvl in levels:
-        ax.axhline(lvl, **kwargs)
+        ax.axhline(lvl, color=cfg['isoline.color'], lw=cfg['isoline.width'], dashes=cfg['isoline.dash'], **kwargs)
 
 
 def add_cross_lines(levels, p, ax, **kwargs):
@@ -81,11 +107,31 @@ def add_cross_lines(levels, p, ax, **kwargs):
     """
     crossings = utils.crossing_indexes(levels, p)
     for v in crossings:
-        ax.axvline(v, **kwargs)
+        ax.axvline(v, color=cfg['crossline.color'], lw=cfg['crossline.width'], dashes=cfg['crossline.dash'], **kwargs)
+    if cfg['crossline.draw_limiting']:
+        ax.axvline(len(p), color=cfg['zeroline.color'], lw=cfg['zeroline.width'], dashes=cfg['zeroline.dash'])
+    return ax
 
 
-def plot_density(levels, p, ax=None):
-    """Plot sorted density `p` augmented with:
+def density(levels, data, index=None, ax=None):
+    """Plot data elements against its indexes and return axis object."""
+    if ax is None:
+        figure = plt.figure()
+        ax = figure.add_subplot(111)
+
+    if index is None:
+        index = np.arange(len(data))
+
+    _add_zeroline(ax)
+    add_level_lines(levels, ax)
+    ax.plot(index, data)
+    ax.set_ylim(bottom=0)
+
+    return ax
+
+
+def plot_sorted_density(levels, p, ax=None):
+    """Plot sorted density `p` against index of sorted density value augmented with:
       * horizontal lines at each of the levels
       * vertical lines where the level lines cross the density plot
     """
@@ -96,12 +142,13 @@ def plot_density(levels, p, ax=None):
         figure = plt.figure()
         ax = figure.add_subplot(111)
 
-    ax.set_title("density")
-    ax.axhline(0, color='grey', lw=0.5)
-    add_level_lines(levels, ax, color='black', lw=0.5)
-    add_cross_lines(levels, p_sorted, ax, color='black', lw=0.5, dashes=[2, 6])
-
+    _add_zeroline(ax)
+    add_level_lines(levels, ax)
+    add_cross_lines(levels, p_sorted, ax)
     ax.step(np.arange(p.size), p_sorted)
+    ax.set_title("density")
+
+    ax.set_ylim(bottom=0)
 
 
 def plot_cumulative_density(levels, p, ax=None):
@@ -118,25 +165,35 @@ def plot_cumulative_density(levels, p, ax=None):
         figure = plt.figure()
         ax = figure.add_subplot(111)
 
-    ax.set_title("cumulative density")
-    ax.axhline(0, color='grey', lw=0.5)
-    add_cross_lines(levels, p, ax, color='black', lw=0.5, dashes=[2, 6])
-
+    _add_zeroline(ax)
+    add_cross_lines(levels, p, ax)
     ax.step(np.arange(p.size), p_cumsum)
+    ax.set_title("cumulative density")
+    ax.set_ylim(bottom=0)
 
 
-def contour(p, x, y, ax=None):
+def contour(p, x, y, levels=None, ax=None, **kwargs):
     """Draw contour plot over p, x, y.
 
-    Optionally you may provide an axis to use for drawing.
+    Optionally you may provide an axis to use for drawing and other arguments for `Axes.contour`.
     """
     if ax is None:
         fig = plt.figure()
         ax = fig.add_subplot(111)
-    ax.contour(x, y, p)
+    ax.contour(x, y, p, levels=np.unique(levels), **kwargs)
+    return ax
 
 
-def plot_contour_levels_stat(levels_lst, pdf_lst, labels=DEFAULT_LABELS):
+def contour_levels_stat(levels, p, ax=None):
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+    sum_prob = stats.contour_level_weight(levels, p)
+    ax.bar(x=list(range(len(sum_prob))), height=sum_prob)
+    return ax
+
+
+def plot_contour_levels_stats(levels_lst, pdf_lst, labels=DEFAULT_LABELS):
     """
 
     Args:
@@ -191,7 +248,7 @@ def contour_comparision_plot_2d(levels_lst, pdf, x=None, y=None, indexes=None, l
 
     for i, (axis, label, levels) in enumerate(zip(ax, labels, levels_lst)):
         #print('levels ({}): {}'.format(label, levels))
-        axis.contour(x, y, pdf, levels=np.unique(levels))
+        axis.contour(x, y, pdf, levels=np.unique(levels), colors=mpl.rcParams['lines.color'])
         axis.set_title(label)
 
     plt.show()

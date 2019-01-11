@@ -18,7 +18,8 @@ def normalize_to_indexes(indexes=None, x=None, y=None, z=None, shape=None, d=Non
     """Get index sequences x and y from a flexible set of parameters.
 
     Args:
-        indexes : sequence of sequences.
+        indexes : sequence of sequences, optional.
+            The index to normalize/validate with other given input.
         x : sequences of numbers, optional.
             The support points along x-dimension to query the function on.
         y : sequences of numbers, optional.
@@ -29,7 +30,7 @@ def normalize_to_indexes(indexes=None, x=None, y=None, z=None, shape=None, d=Non
         d : integer, optional
             The dimension of the index to create.
         n : integer, optional
-            the number of desired support points, for both dimensions.
+            the number of desired support points, for all dimensions.
         low : sequence of two integers
             The lower bound along x and y dimensions.
         high : sequence of two integers

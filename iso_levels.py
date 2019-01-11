@@ -23,14 +23,23 @@ def _validate_normalize_data(data):
 
     if not np.all(np.isfinite(data)):
         raise ValueError("data values may only be positive numbers or zero, but not negative, nan or infinite.")
+
     return data
 
 
-def _validate_normalize_levels(levels, remove_double_levels=False):
-    """Sanity check for levels."""
+def _validate_normalize_levels(levels, k, remove_double_levels=False):
+    """Sanity check for levels.
 
-    # if they are not ordered then something is wrong
-    assert(np.all(np.diff(levels) >= 0))
+    Args:
+        k : integer
+            Number of levels to produce.
+    """
+
+    # must be ordered
+    assert(np.all(np.diff(levels) >= 0)), "iso levels are not ordered"
+
+    # must be the correct number
+    assert(len(levels) == k), "produces only {} many iso levels".format(k)
 
     # but it may happen that values occur twice: remove them
     if remove_double_levels:
@@ -54,9 +63,11 @@ def equi_value(data, k=DEFAULT_K):
     Returns:
         A sequence of k levels in increasing order.
     """
+    if k < 1:
+        raise ValueError("k must be at least 1")
     data = _validate_normalize_data(data)
     levels = np.linspace(np.min(data), np.max(data), k+2)[1:-1]
-    return _validate_normalize_levels(levels)
+    return _validate_normalize_levels(levels, k)
 
 
 def equi_prob_per_level(data, k=DEFAULT_K):
@@ -78,6 +89,8 @@ def equi_prob_per_level(data, k=DEFAULT_K):
         A sequence of k levels in increasing order.
 
     """
+    if k < 1:
+        raise ValueError("k must be at least 1")
 
     pdf = _validate_normalize_data(data)
 
@@ -89,7 +102,7 @@ def equi_prob_per_level(data, k=DEFAULT_K):
     df = pd.DataFrame(data={'pdf': pdf, 'prob': prob})
     df = df.sort_values(by=['prob'])
 
-    # get cummulative prob in that order
+    # get cumulative prob in that order
     df['cum_prob'] = np.cumsum(df.prob)
     if not np.isclose([1], df['cum_prob'][-1:]):
         raise AssertionError('normalization failed')
@@ -97,12 +110,16 @@ def equi_prob_per_level(data, k=DEFAULT_K):
     # level targets
     level_targets = np.linspace(0, 1, k + 2)[1:-1]
 
-    # indices of corresponding pdf values
+    # indices of corresponding pdf values that make us exceed 1/k probability
     indices = df['cum_prob'].searchsorted(level_targets, side='left')
 
+    # choose iso value as the mid value between the exceeding pdf value and the previous one (if exists)
+    #  advantage: iso value never collides with actual data value
+    indices_previous = [0 if i == 0 else i-1 for i in indices]
+
     # pdf values are the contour level values
-    levels = df.pdf.iloc[indices].values
-    return _validate_normalize_levels(levels)
+    levels = (df.pdf.iloc[indices_previous].values + df.pdf.iloc[indices].values)/2
+    return _validate_normalize_levels(levels, k)
 
 
 def equi_horizontal_prob_per_level(data, k=DEFAULT_K):
@@ -125,6 +142,8 @@ def equi_horizontal_prob_per_level(data, k=DEFAULT_K):
     Returns:
         A sequence of k levels in increasing order.
     """
+    if k < 1:
+        raise ValueError("k must be at least 1")
 
     pdf = _validate_normalize_data(data)
 
@@ -159,7 +178,7 @@ def equi_horizontal_prob_per_level(data, k=DEFAULT_K):
 
     # 7. get density levels
     levels = pdf_sorted[indices]
-    return _validate_normalize_levels(levels)
+    return _validate_normalize_levels(levels, k)
 
 
 if __name__ == '__main__':
