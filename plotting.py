@@ -95,7 +95,6 @@ def _validate_infer_indexes(pdf, x, y, indexes=None):
 
 def add_level_lines(levels, ax, **kwargs):
     """Adds horizontal level lines to given axis."""
-    # ax.axhline(0)
 
     for lvl in levels:
         ax.axhline(lvl, color=cfg['isoline.color'], lw=cfg['isoline.width'], dashes=cfg['isoline.dash'], **kwargs)
@@ -147,8 +146,8 @@ def plot_sorted_density(levels, p, ax=None):
     add_cross_lines(levels, p_sorted, ax)
     ax.step(np.arange(p.size), p_sorted)
     ax.set_title("density")
-
     ax.set_ylim(bottom=0)
+    return ax
 
 
 def plot_cumulative_density(levels, p, ax=None):
@@ -170,6 +169,7 @@ def plot_cumulative_density(levels, p, ax=None):
     ax.step(np.arange(p.size), p_cumsum)
     ax.set_title("cumulative density")
     ax.set_ylim(bottom=0)
+    return ax
 
 
 def contour(p, x, y, levels=None, ax=None, **kwargs):
@@ -185,16 +185,18 @@ def contour(p, x, y, levels=None, ax=None, **kwargs):
 
 
 def contour_levels_stat(levels, p, ax=None):
+    """Plot contour level statistic for given levels and data."""
     if ax is None:
         fig = plt.figure()
         ax = fig.add_subplot(111)
     sum_prob = stats.contour_level_weight(levels, p)
-    ax.bar(x=list(range(len(sum_prob))), height=sum_prob)
+    level_labels = ['L' + str(i + 1) for i in range(len(levels) + 1)]
+    ax.bar(x=level_labels, height=sum_prob)
     return ax
 
 
 def plot_contour_levels_stats(levels_lst, pdf_lst, labels=DEFAULT_LABELS):
-    """
+    """Plot contour level statistics for all provided levels and data.
 
     Args:
         levels_lst : sequence of numbers.
@@ -217,12 +219,10 @@ def plot_contour_levels_stats(levels_lst, pdf_lst, labels=DEFAULT_LABELS):
     fig, ax = plt.subplots(figsize=(4 * n, 2), nrows=1, ncols=n)
 
     for i, (levels, pdf) in enumerate(zip(levels_lst, pdf_lst)):
-
+        contour_levels_stat(levels, pdf, ax[i])
         sum_prob = stats.contour_level_weight(levels, pdf)
-
-        level_labels = ['L' + str(i + 1) for i in range(len(levels) + 1)]
-        ax[i].bar(level_labels, sum_prob)
         ax[i].set_title(labels[i])
+    return ax
 
 
 def contour_comparision_plot_2d(levels_lst, pdf, x=None, y=None, indexes=None, labels=DEFAULT_LABELS):
@@ -251,11 +251,54 @@ def contour_comparision_plot_2d(levels_lst, pdf, x=None, y=None, indexes=None, l
         axis.contour(x, y, pdf, levels=np.unique(levels), colors=mpl.rcParams['lines.color'])
         axis.set_title(label)
 
-    plt.show()
+    fig.show()
+    return fig
+
+
+def combined_2d(p, levels, x=None, y=None, indexes=None, ax=None):
+    """Plot density contour plot over o using levels.
+
+    Args:
+        p : 2d-array-like
+            The data to plot.
+        levels : sequence of real numbers.
+            Iso value levels.
+        x : sequence of numbers, optional.
+        y : sequence of numbers, optional.
+            x and y together form the grid of input values where pdf provides function values.
+            It must be either both, x and y be given, or none of them. If both are given it must match the shape of pdf
+            or pdf must be linear, in which case the original shape of pdf is reconstructed from the lenght of x and y.
+        indexes : 2d index sequence
+            Is an alternative to x and y.
+        figure : Figure object, optional.
+            Use it for drawing, if provided.
+    """
+    if ax is None:
+        fig, ax = plt.subplots(1,4, figsize=(18, 4))
+
+    p, x, y = _validate_infer_indexes(p, x, y, indexes)
+
+    contour(p, x, y, levels, ax=ax[0])
+    plot_sorted_density(levels, p, ax=ax[1])
+    plot_cumulative_density(levels, p, ax=ax[2])
+    contour_levels_stat(levels, p, ax=ax[3])
+
+
+def combined_1d(p, levels, index=None, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots(1,4, figsize=(18, 4))
+    else:
+        assert(len(ax) >= 4), "require at least 4 axis objects"
+    #p, x, y = _validate_infer_indexes(p, x=index)
+
+    density(levels, p, index, ax=ax[0])
+    plot_sorted_density(levels, p, ax=ax[1])
+    plot_cumulative_density(levels, p, ax=ax[2])
+    contour_levels_stat(levels, p, ax=ax[3])
 
 
 def plot_combined(p, x=None, y=None, indexes=None, k=iso_levels.DEFAULT_K):
-    """Plot both, contour level stats, and the actual contour plots."""
+    """Plot both, contour level stats and the actual contour plots for different values of k"""
 
     p, x, y = _validate_infer_indexes(p, x, y, indexes)
 
@@ -277,7 +320,7 @@ def plot_combined(p, x=None, y=None, indexes=None, k=iso_levels.DEFAULT_K):
     # plot
     for i, ki in enumerate(k):
         levels = [pdf_lvls[i], prob_lvls[i], prob_hori_lvls[i]]
-        plot_contour_levels_stat(levels,
+        plot_contour_levels_stats(levels,
                                  len(levels)*[p],
                                  labels=[s.format(ki) for s in ['old (k={})', 'vertical (k={})', 'horizonal (k={})']])
     for i, ki in enumerate(k):

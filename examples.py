@@ -169,10 +169,8 @@ def iris_kde(kernel_bandwidth=None):
     plotting.plot_combined(p, indexes[0], indexes[1], k=[3, 5, 10])
 
 
-def plotting_styles():
-    from functools import reduce
+def basic_idea():
     import operator
-    import matplotlib as mpl
     from matplotlib import pyplot as plt
 
     import iso_levels
@@ -182,56 +180,51 @@ def plotting_styles():
     sigma = [0.05, 0.5, 0.7, 2]
     weights = [0.6, 1, 0.7, 1]
 
-    indexes = utils.normalize_to_indexes(low=[-1], high=[10], n=100, d=1)[0]
-    ps1d = [support_gaussian_1d(indexes, m, s) for m, s in zip(mu, sigma)]
-    gp1d = sum(map(operator.mul, weights, ps1d))
-    levels = iso_levels.equi_prob_per_level(gp1d, k=7)
-    levels2 = iso_levels.equi_value(gp1d, k=7)
+    index_1d = utils.normalize_to_indexes(low=[-1], high=[10], n=2500, d=1)[0]
+    p_single_1d = [support_gaussian_1d(index_1d, m, s) for m, s in zip(mu, sigma)]
+    p_mixture_1d = sum(map(operator.mul, weights, p_single_1d))
+    levels = iso_levels.equi_prob_per_level(p_mixture_1d, k=7)
+    levels2 = iso_levels.equi_value(p_mixture_1d, k=7)
 
+    # I used this i identify suitable mu, sigma and weights
     # figure = plt.figure(figsize=(9, 4))
     # ax = figure.add_subplot(121)
     # plotting.density(levels, gp1d, ax=ax)
     # ax = figure.add_subplot(122)
     # plotting.density(levels2, gp1d, ax=ax)
 
-    figure = plt.figure(figsize=(18, 4))
-    plotting.density(levels, gp1d, indexes, ax=figure.add_subplot(141))
-    plotting.plot_sorted_density(levels, gp1d, ax=figure.add_subplot(142))
-    plotting.plot_cumulative_density(levels, gp1d, ax=figure.add_subplot(143))
-    plotting.contour_levels_stat(levels, gp1d, ax=figure.add_subplot(144))
-    figure.show()
+    fig, ax = plt.subplots(2, 4, figsize=(18, 8))
+    plotting.combined_1d(p_mixture_1d, levels2, index_1d, ax[0])
+    plotting.combined_1d(p_mixture_1d, levels, index_1d, ax[1])
+    fig.show()
 
+    indexes_2d = utils.normalize_to_indexes(low=[-1, -3], high=[10, 3], n=100)
+    p_single_2d = [support_gaussian_2d(indexes=indexes_2d, mu=[m, 0], sigma=[[s, 0], [0, s]]) for m, s in zip(mu, sigma)]
+    p_mixture_2d = sum(map(operator.mul, weights, p_single_2d))
+    levels = iso_levels.equi_prob_per_level(p_mixture_2d, k=7)
+    levels2 = iso_levels.equi_value(p_mixture_2d, k=7)
 
-    gindex = utils.normalize_to_indexes(low=[-1, -3], high=[10, 3], n=50)
-    ps2d = [support_gaussian_2d(indexes=gindex, mu=[m, 0], sigma=[[s, 0], [0, s]]) for m, s in zip(mu, sigma)]
-    gp2d = sum(map(operator.mul, weights, ps2d))
-    levels = iso_levels.equi_prob_per_level(gp2d, k=7)
-    levels2 = iso_levels.equi_value(gp2d, k=7)
+    print('old embrace ratio: {}'.format(stats.embrace_ratio(levels2, p_mixture_2d)))
+    print('new embrace ratio: {}'.format(stats.embrace_ratio(levels, p_mixture_2d)))
 
-    print('old embrace ratio: {}'.format(stats.embrace_ratio(levels2, gp2d)))
-    print('new embrace ratio: {}'.format(stats.embrace_ratio(levels, gp2d)))
-
-    # plotting.plot_combined(gp2d, indexes=gindex, k=list(range(2,10)))
+    # I used this to identify k=7 as particularly interesting
+    #plotting.plot_combined(gp2d, indexes=gindex, k=list(range(2,10)))
     #plotting.plot_combined(gp2d, indexes=gindex, k=[7])
 
-    ######
-
-    figure = plt.figure(figsize=(18, 4))
-    plotting.contour(gp2d, gindex[0], gindex[1], levels, ax=figure.add_subplot(141))
-    plotting.plot_sorted_density(levels, gp2d, ax=figure.add_subplot(142))
-    plotting.plot_cumulative_density(levels, gp2d, ax=figure.add_subplot(143))
-    plotting.contour_levels_stat(levels, gp2d, ax=figure.add_subplot(144))
-    figure.show()
+    fig, ax = plt.subplots(2, 4, figsize=(18, 8))
+    plotting.combined_2d(p_mixture_2d, levels2, x=indexes_2d[0], y=indexes_2d[1], ax=ax[0])
+    plotting.combined_2d(p_mixture_2d, levels, x=indexes_2d[0], y=indexes_2d[1], ax=ax[1])
+    fig.show()
 
 
 if __name__ == '__main__':
 
-    #iris_kde(0.15)
-    # gaussian_2d_plain()
-    # gaussian_2d_central_splike()
-    # gaussian_2d_shifted_spike()
-    # gausssian_2d_three_gaussians()
-    # allbus()
-    # titanic()
+    iris_kde(0.15)
+    gaussian_2d_plain()
+    gaussian_2d_central_splike()
+    gaussian_2d_shifted_spike()
+    gausssian_2d_three_gaussians()
+    allbus()
+    titanic()
 
-    plotting_styles()
+    # basic_idea()
