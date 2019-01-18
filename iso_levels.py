@@ -121,10 +121,17 @@ def equi_prob_per_level(data, k=DEFAULT_K):
     # choose iso value as the mid value between the exceeding pdf value and the previous one (if exists)
     #  advantage: iso value never collides with actual existing pdf value
     indices_previous = [0 if i == 0 else i-1 for i in indices]
-    # assert(np.all(df.pdf.iloc[indices_previous].values < df.pdf.iloc[indices].values))
+
+    # verify
+    values = df.pdf.iloc[indices].values
+    values_previous = df.pdf.iloc[indices_previous].values
+    assert(np.all(np.logical_or(
+        values_previous < values,
+        values_previous == 0
+    )))
 
     # pdf values are the contour level values
-    levels = (df.pdf.iloc[indices_previous].values + df.pdf.iloc[indices].values)/2
+    levels = (values_previous + values)/2
     return _validate_normalize_levels(levels, k)
 
 

@@ -299,6 +299,7 @@ def combined_2d(p, levels, x=None, y=None, indexes=None, slice_=None, ax=None, s
         # draw slice
         ax_density = density(levels, slice_['pdf'], x if slice_['axis'] == 'y' else y, ax=next(axis_it))
         #ax_density.set_title('1d slice')
+
     if show_density:
         plot_sorted_density(levels, p, ax=next(axis_it))
     if show_cummulative_density:

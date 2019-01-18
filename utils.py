@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 
-DEFAULT_N = 50  # default number of support points along one axis
+DEFAULT_N = 100  # default number of support points along one axis
 DEFAULT_D = 2  # default number of dimensions when creating support indexes dimension
 
 
@@ -92,9 +92,9 @@ def normalize_to_indexes(indexes=None, x=None, y=None, z=None, shape=None, d=Non
 
         padding = (high - low)*0.1
         if low_from_data:
-            low -= padding
+            low = low - padding
         if high_from_data:
-            high += padding
+            high = high + padding
 
     if low is None:
         low = [0]*d
@@ -169,3 +169,40 @@ def normalize_data(data):
         min_, max_ = min(values), max(values)
         data[d] = (values - min_) / (max_ - min_)
     return data
+
+
+def get_slice(data, indexes, axis, value):
+    """Get a 1d slice of data for a particular value of an axis.
+
+    Args:
+        data : np.array like
+            the data to slice
+        indexes : [xindex, yindex]
+            xindex and yindex are the points of support data contains the values of
+        axis : ['x' or 'y']
+            the axis to fix a value for
+        value : float
+            the value to slice at (or closest to).
+    Returns:
+        a three-tuple of (axis, value, <slice_data>)
+
+    """
+
+    data = np.asarray(data)
+
+    # slice_idx = int(len(indexes_2d[1]) / 2)
+    # slice_val = indexes_2d[1][slice_idx]
+    # slice_ = {'axis': 'y', 'value': slice_val, 'pdf': p[slice_idx, :]}
+
+    # index and value of closest value to value along correct index
+    index1d = np.asarray(indexes[0 if axis == 'x' else 1])
+    slice_idx = np.searchsorted(index1d, value, side='left')
+    slice_value = index1d[slice_idx]
+
+    # get slice
+    if axis == 'x':
+        slice_data = data[:, slice_idx]
+    else:
+        slice_data = data[slice_idx, :]
+
+    return {'axis': axis, 'value': slice_value, 'pdf': slice_data}

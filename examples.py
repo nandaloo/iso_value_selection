@@ -117,31 +117,35 @@ def support_kde(kernel, indexes=None):
 #### actual examples ####
 
 def gaussian_2d_plain():
-    indexes = utils.normalize_to_indexes(low=[-2, -2], high=[2, 2], n=30)
+    lim = 3.5
+    indexes = utils.normalize_to_indexes(low=[-lim, -lim], high=[lim, lim], n=100)
     p = support_gaussian_2d(indexes=indexes)
     plotting.plot_combined(p, indexes[0], indexes[1], k=[3, 5, 7, 10])
 
 
 def gaussian_2d_central_splike():
-    indexes = utils.normalize_to_indexes(low=[-3, -3], high=[3, 3], n=50)
+    lim = 3.5
+    indexes = utils.normalize_to_indexes(low=[-lim, -lim], high=[lim, lim], n=100)
     p1 = support_gaussian_2d(indexes=indexes, sigma=[[1.0, 0], [0, 1]])
     p2 = support_gaussian_2d(indexes=indexes, sigma=[[0.005, 0], [0, 0.005]])
     plotting.plot_combined(p1+p2, indexes[0], indexes[1], k=[3, 5, 10])
 
 
 def gaussian_2d_shifted_spike():
-    indexes = utils.normalize_to_indexes(low=[-2, -2], high=[2, 2], n=50)
+    lim = 3
+    indexes = utils.normalize_to_indexes(low=[-lim, -lim], high=[lim, lim], n=100)
     p1 = support_gaussian_2d(indexes=indexes, sigma=[[1.0, 0], [0, 1]])
     p2 = support_gaussian_2d(indexes=indexes, mu=[0.25, 0.25], sigma=[[0.02, 0], [0, 0.02]])
     plotting.plot_combined(p1+p2, indexes[0], indexes[1], k=[3, 5, 10])
 
 
 def gausssian_2d_three_gaussians():
-    indexes = utils.normalize_to_indexes(low=[-2, -2], high=[2, 2], n=50)
+    lim = 2.5
+    indexes = utils.normalize_to_indexes(low=[-lim, -lim], high=[lim, lim], n=100)
     p1 = support_gaussian_2d(indexes=indexes, sigma=[[1, 0], [0, 1]])
     p2 = support_gaussian_2d(indexes=indexes, mu=[0.25, 0.25], sigma=[[0.02, 0], [0, 0.02]])
     p3 = support_gaussian_2d(indexes=indexes, mu=[-0.35, -0.35], sigma=[[0.07, 0], [0, 0.1]])
-    plotting.plot_combined(2 * p1  + p2 + p3, indexes[0], indexes[1], k=[3, 5, 10])
+    plotting.plot_combined(2 * p1 + p2 + p3, indexes[0], indexes[1], k=[3, 5, 10])
 
 
 def gaussian_1d():
@@ -152,17 +156,50 @@ def gaussian_1d():
 
 
 def allbus():
-    df = pd.read_csv('allbus_age-vs-income.csv', index_col=False)
+    df = pd.read_csv('./data/allbus_age-vs-income.csv', index_col=False)
     allbus_p = df['p'].values
 
     plotting.plot_combined(allbus_p, k=[3, 5, 7, 10])
 
 
 def titanic():
-    df = pd.read_csv('titanic_age-vs-fare.csv', index_col=False)
+    df = pd.read_csv('./data/titanic_age-vs-fare.csv', index_col=False)
     titanic_p = df['p'].values
-
     plotting.plot_combined(titanic_p, k=[3, 5, 7, 10])
+
+
+def data_file_with_kde(filepath, kernel_bandwidth=None, k=7, usecols=None, index_col=None):
+
+    # get data
+    df = pd.read_csv(filepath, index_col=index_col, usecols=usecols)
+    data = df.values.transpose()
+
+    # derive pdf
+    mykernel = pdf_kernel(data, kernel_bandwidth=kernel_bandwidth)
+
+    # get support
+    indexes = utils.normalize_to_indexes(data=data)
+    p = support_kde(mykernel, indexes)
+
+    # plot
+    #plotting.plot_combined(p, indexes[0], indexes[1], k=[3, 5, 7, 10])
+
+    levels = iso_levels.equi_prob_per_level(p, k=k)
+    levels2 = iso_levels.equi_value(p, k=k)
+
+    # get index of max
+    max_idx = np.unravel_index(np.argmax(p, axis=None), p.shape)
+    slice_ = utils.get_slice(p, indexes, 'y', indexes[1][max_idx[0]])
+    slice_ = utils.get_slice(p, indexes, 'y', 68)
+
+    # print('old embrace ratio: {}'.format(stats.embrace_ratio(levels2, p)))
+    # print('new embrace ratio: {}'.format(stats.embrace_ratio(levels, p)))
+
+    fig, ax = plt.subplots(2, 3, figsize=(3 * 5, 8))
+
+    plotting.combined_2d(p, levels2, x=indexes[0], y=indexes[1], slice_=slice_, ax=ax[0])
+    plotting.combined_2d(p, levels, x=indexes[0], y=indexes[1], slice_=slice_, ax=ax[1])
+    fig.show()
 
 
 def titanic_kde(kernel_bandwidth=None):
@@ -181,7 +218,8 @@ def titanic_kde(kernel_bandwidth=None):
     plotting.plot_combined(p, indexes[0], indexes[1], k=[3, 5, 7, 10])
 
 
-def iris_kde(kernel_bandwidth=None):
+def iris_kde(kernel_bandwidth=None, k=6):
+
     # get data
     from sklearn import datasets
     iris = datasets.load_iris()
@@ -195,7 +233,18 @@ def iris_kde(kernel_bandwidth=None):
     p = support_kde(mykernel, indexes)
 
     # plot
-    plotting.plot_combined(p, indexes[0], indexes[1], k=[3, 5, 10])
+    #plotting.plot_combined(p, indexes[0], indexes[1], k=[3, 5, 10])
+
+    levels = iso_levels.equi_prob_per_level(p, k=k)
+    levels2 = iso_levels.equi_value(p, k=k)
+
+    slice_ = utils.get_slice(p, indexes, 'y', 3)
+    #slice_ = None
+
+    fig, ax = plt.subplots(2, 3, figsize=(3 * 5, 8))
+    plotting.combined_2d(p, levels2, x=indexes[0], y=indexes[1], slice_=slice_, ax=ax[0])
+    plotting.combined_2d(p, levels, x=indexes[0], y=indexes[1], slice_=slice_, ax=ax[1])
+    fig.show()
 
 
 def broad_and_normal_gaussians(k=5):
@@ -221,9 +270,7 @@ def broad_and_normal_gaussians(k=5):
     levels = iso_levels.equi_prob_per_level(p, k=k)
     levels2 = iso_levels.equi_value(p, k=k)
 
-    slice_idx = int(len(indexes_2d[1]) / 2)
-    slice_val = indexes_2d[1][slice_idx]
-    slice_ = {'axis': 'y', 'value': slice_val, 'pdf': p[slice_idx, :]}
+    slice_ = utils.get_slice(p, indexes_2d, 'y', 0)
 
     fig, ax = plt.subplots(2, 3, figsize=(3 * 5, 8))
     plotting.combined_2d(p, levels2, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[0])
@@ -261,9 +308,7 @@ def plateau(k=5):
     levels = iso_levels.equi_prob_per_level(p_raised, k=k)
     levels2 = iso_levels.equi_value(p_raised, k=k)
 
-    slice_idx = int(len(indexes_2d[1]) / 2)
-    slice_val = indexes_2d[1][slice_idx]
-    slice_ = {'axis': 'y', 'value': slice_val, 'pdf': p_raised[slice_idx, :]}
+    slice_ = utils.get_slice(p_raised, indexes_2d, 'y', 0)
 
     fig, ax = plt.subplots(2, 3, figsize=(3 * 5, 8))
     plotting.combined_2d(p_raised, levels2, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[0])
@@ -307,7 +352,7 @@ def basic_idea():
 
     slice_idx = int(len(indexes_2d[1])/2)
     slice_val = indexes_2d[1][slice_idx]
-    slice_ = {'axis': 'y', 'value': slice_val, 'pdf': p_mixture_2d[slice_idx, :]}
+    slice_ = utils.get_slice(p_mixture_2d, indexes_2d, 'y', slice_val)
 
     print('old embrace ratio: {}'.format(stats.embrace_ratio(levels2, p_mixture_2d)))
     print('new embrace ratio: {}'.format(stats.embrace_ratio(levels, p_mixture_2d)))
@@ -326,15 +371,24 @@ def basic_idea():
 if __name__ == '__main__':
 
     # iris_kde(0.15)
-    # gaussian_2d_plain()
-    # gaussian_2d_central_splike()
-    # gaussian_2d_shifted_spike()
-    # gausssian_2d_three_gaussians()
-    # allbus()
-    # titanic()
+    #gaussian_2d_plain()
+    #gaussian_2d_central_splike()
+    #gaussian_2d_shifted_spike()
+    #gausssian_2d_three_gaussians()
+    #allbus()
+    #titanic()
+    #titanic_kde(0.15)
 
     # basic_idea()
     # plateau()
     # broad_and_normal_gaussians()
+    # data_file_with_kde('./data/nnc_z_min-linearity.csv', kernel_bandwidth=0.12)
+    data_file_with_kde('~/Downloads/data.csv', kernel_bandwidth=0.10, k=6)
+
+    # iris_kde(0.15, k=5)
+    # football works, but it's a bit to normal...
+    # data_file_with_kde('./data/football_careergoals-vs-topspeed.csv', kernel_bandwidth=0.10, k=6)  # with slice at y = 60
+
+    # data_file_with_kde('./data/mpg_year-mpg.csv', kernel_bandwidth=0.15)
 
     print("done")
