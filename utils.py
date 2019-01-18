@@ -14,7 +14,8 @@ def crossing_indexes(levels, p):
     return np.searchsorted(p, levels)
 
 
-def normalize_to_indexes(indexes=None, x=None, y=None, z=None, shape=None, d=None, n=None, low=None, high=None, data=None):
+def normalize_to_indexes(indexes=None, x=None, y=None, z=None, shape=None, d=None, n=None, low=None, high=None,
+                         data=None, data_padding=0.1):
     """Get index sequences x and y from a flexible set of parameters.
 
     Args:
@@ -38,6 +39,9 @@ def normalize_to_indexes(indexes=None, x=None, y=None, z=None, shape=None, d=Non
         data : 1d or 2d data array, optional
             1st dimension indexes dimensions, 2nd the items. If low and high are missing, they are inferred from this
             data array.
+        data_padding : scalar, optional.
+            Only has effect if `data` is used to infer indices. Sets the 'padding' around the outermost data points
+            by means of percentage of the data extent.
 
     Returns:
         A tuple (x, y) of indexes along x and y dimension, respectively.
@@ -79,10 +83,18 @@ def normalize_to_indexes(indexes=None, x=None, y=None, z=None, shape=None, d=Non
         #if len(data.shape) != len(shape):
         #    raise ValueError('shape and shape of data do not match.')
 
+        low_from_data = low is None
         if low is None:
             low = np.amin(data, axis=1)
+        high_from_data = high is None
         if high is None:
             high = np.amax(data, axis=1)
+
+        padding = (high - low)*0.1
+        if low_from_data:
+            low -= padding
+        if high_from_data:
+            high += padding
 
     if low is None:
         low = [0]*d

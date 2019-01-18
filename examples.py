@@ -214,7 +214,7 @@ def broad_and_normal_gaussians(k=5):
 
     weights = np.array([1, 1, 0.5, 1, 1])
 
-    indexes_2d = utils.normalize_to_indexes(low=[-10, -10], high=[10, 10], n=100)
+    indexes_2d = utils.normalize_to_indexes(low=[-12, -10], high=[12, 10], n=100)
 
     p = support_mixed_gaussian_2d(indexes_2d, mu, sigma, weights, from_scalar=False)
 
@@ -332,6 +332,9 @@ if __name__ == '__main__':
     # gausssian_2d_three_gaussians()
     # allbus()
     # titanic()
-    #basic_idea()
+
+    # basic_idea()
     # plateau()
-    broad_and_normal_gaussians()
+    # broad_and_normal_gaussians()
+
+    print("done")
