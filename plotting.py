@@ -256,7 +256,7 @@ def contour_comparision_plot_2d(levels_lst, pdf, x=None, y=None, indexes=None, l
     return fig
 
 
-def combined_2d(p, levels, x=None, y=None, indexes=None, ax=None):
+def combined_2d(p, levels, x=None, y=None, indexes=None, slice_=None, ax=None):
     """Plot density contour plot over o using levels.
 
     Args:
@@ -271,18 +271,35 @@ def combined_2d(p, levels, x=None, y=None, indexes=None, ax=None):
             or pdf must be linear, in which case the original shape of pdf is reconstructed from the lenght of x and y.
         indexes : 2d index sequence
             Is an alternative to x and y.
+        slice_ : dict, optional.
+            If given add a plot of a 1d slice of the 2d probability function. The slice is along axis `slice['axis']`
+            at value `slice['value']` with density data `slice['pdf']`.
         figure : Figure object, optional.
             Use it for drawing, if provided.
     """
+
+    figxsize = 5 if slice_ is not None else 4
+
     if ax is None:
-        fig, ax = plt.subplots(1,4, figsize=(18, 4))
+        fig, ax = plt.subplots(1, figxsize, figsize=(4*figxsize, 4))
+    else:
+        assert(len(ax) >= figxsize)
 
     p, x, y = _validate_infer_indexes(p, x, y, indexes)
 
-    contour(p, x, y, levels, ax=ax[0])
-    plot_sorted_density(levels, p, ax=ax[1])
-    plot_cumulative_density(levels, p, ax=ax[2])
-    contour_levels_stat(levels, p, ax=ax[3])
+    axis_it = iter(ax)
+    contour_ax = contour(p, x, y, levels, ax=next(axis_it))
+    if slice_ is not None:
+        # add slice indication line
+        if slice_['axis'] == 'x':
+            contour_ax.axvline(slice_['value'], color='red', lw=cfg['zeroline.width'], dashes=cfg['zeroline.dash'])
+        else:
+            contour_ax.axhline(slice_['value'], color='red', lw=cfg['zeroline.width'], dashes=cfg['zeroline.dash'])
+        # draw slice
+        density(levels, slice_['pdf'], x if slice_['axis'] == 'x' else y, ax=next(axis_it))
+    plot_sorted_density(levels, p, ax=next(axis_it))
+    plot_cumulative_density(levels, p, ax=next(axis_it))
+    contour_levels_stat(levels, p, ax=next(axis_it))
 
 
 def combined_1d(p, levels, index=None, ax=None):

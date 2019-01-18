@@ -172,7 +172,7 @@ def iris_kde(kernel_bandwidth=None):
 def basic_idea():
     """Creates plot for initial explanatory and motivating example for paper.
 
-    Also provide some search capapbilities, i.e. allows to play with parameters to find exemplary distributions.
+    Also provide some search capabilities, i.e. allows to play with parameters to find exemplary distributions.
     """
     import operator
     from matplotlib import pyplot as plt
@@ -205,8 +205,13 @@ def basic_idea():
     indexes_2d = utils.normalize_to_indexes(low=[-1, -3], high=[10, 3], n=100)
     p_single_2d = [support_gaussian_2d(indexes=indexes_2d, mu=[m, 0], sigma=[[s, 0], [0, s]]) for m, s in zip(mu, sigma)]
     p_mixture_2d = sum(map(operator.mul, weights, p_single_2d))
+
     levels = iso_levels.equi_prob_per_level(p_mixture_2d, k=7)
     levels2 = iso_levels.equi_value(p_mixture_2d, k=7)
+
+    slice_idx = int(len(indexes_2d[1])/2)
+    slice_val = indexes_2d[1][slice_idx]
+    slice_ = {'axis': 'y', 'value': slice_val, 'pdf': p_mixture_2d[slice_idx, :]}
 
     print('old embrace ratio: {}'.format(stats.embrace_ratio(levels2, p_mixture_2d)))
     print('new embrace ratio: {}'.format(stats.embrace_ratio(levels, p_mixture_2d)))
@@ -215,9 +220,12 @@ def basic_idea():
     #plotting.plot_combined(gp2d, indexes=gindex, k=list(range(2,10)))
     #plotting.plot_combined(gp2d, indexes=gindex, k=[7])
 
-    fig, ax = plt.subplots(2, 4, figsize=(18, 8))
-    plotting.combined_2d(p_mixture_2d, levels2, x=indexes_2d[0], y=indexes_2d[1], ax=ax[0])
-    plotting.combined_2d(p_mixture_2d, levels, x=indexes_2d[0], y=indexes_2d[1], ax=ax[1])
+    fig, ax = plt.subplots(2, 5, figsize=(20, 8))
+
+    plotting.combined_2d(p_mixture_2d, levels2, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[0])
+    plotting.combined_2d(p_mixture_2d, levels, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[1])
+    #plotting.combined_2d(p_mixture_2d, levels2, x=indexes_2d[0], y=indexes_2d[1], ax=ax[0])
+    #plotting.combined_2d(p_mixture_2d, levels, x=indexes_2d[0], y=indexes_2d[1], ax=ax[1])
     fig.show()
 
 

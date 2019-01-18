@@ -107,6 +107,10 @@ def equi_prob_per_level(data, k=DEFAULT_K):
     if not np.isclose([1], df['cum_prob'][-1:]):
         raise AssertionError('normalization failed')
 
+    # drop all rows with duplicate pdf values,
+    # we keep the last occurrence, because we need the cumprob value that a given pdf limit "reaches"
+    df = df.drop_duplicates(subset='pdf', keep='last')
+
     # level targets
     level_targets = np.linspace(0, 1, k + 2)[1:-1]
 
@@ -114,11 +118,9 @@ def equi_prob_per_level(data, k=DEFAULT_K):
     indices = df['cum_prob'].searchsorted(level_targets, side='left')
 
     # choose iso value as the mid value between the exceeding pdf value and the previous one (if exists)
-    #  advantage: iso value never collides with actual data value
-
-    # TODO: find first lower index with lower value
-
+    #  advantage: iso value never collides with actual existing pdf value
     indices_previous = [0 if i == 0 else i-1 for i in indices]
+    assert(np.all(df.pdf.iloc[indices_previous].values < df.pdf.iloc[indices].values))
 
     # pdf values are the contour level values
     levels = (df.pdf.iloc[indices_previous].values + df.pdf.iloc[indices].values)/2
