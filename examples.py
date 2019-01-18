@@ -220,7 +220,7 @@ def basic_idea():
     #plotting.plot_combined(gp2d, indexes=gindex, k=list(range(2,10)))
     #plotting.plot_combined(gp2d, indexes=gindex, k=[7])
 
-    fig, ax = plt.subplots(2, 5, figsize=(20, 8))
+    fig, ax = plt.subplots(2, 3, figsize=(3*5, 8))
 
     plotting.combined_2d(p_mixture_2d, levels2, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[0])
     plotting.combined_2d(p_mixture_2d, levels, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[1])

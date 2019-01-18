@@ -125,7 +125,8 @@ def density(levels, data, index=None, ax=None):
     add_level_lines(levels, ax)
     ax.plot(index, data)
     ax.set_ylim(bottom=0)
-
+    ax.set_xlabel('x')
+    ax.set_ylabel('density p(x)')
     return ax
 
 
@@ -192,8 +193,10 @@ def contour_levels_stat(levels, p, ax=None):
         fig = plt.figure()
         ax = fig.add_subplot(111)
     sum_prob = stats.contour_level_weight(levels, p)
-    level_labels = ['L' + str(i + 1) for i in range(len(levels) + 1)]
-    ax.bar(x=level_labels, height=sum_prob)
+    level_labels = ['A' + str(i + 1) for i in range(len(levels) + 1)]
+    ax.bar(x=level_labels, height=sum_prob/sum(sum_prob))
+    ax.set_xlabel('level area')
+    ax.set_ylabel('probability')
     return ax
 
 
@@ -256,7 +259,7 @@ def contour_comparision_plot_2d(levels_lst, pdf, x=None, y=None, indexes=None, l
     return fig
 
 
-def combined_2d(p, levels, x=None, y=None, indexes=None, slice_=None, ax=None):
+def combined_2d(p, levels, x=None, y=None, indexes=None, slice_=None, ax=None, show_density=False, show_cummulative_density=False):
     """Plot density contour plot over o using levels.
 
     Args:
@@ -277,9 +280,7 @@ def combined_2d(p, levels, x=None, y=None, indexes=None, slice_=None, ax=None):
         figure : Figure object, optional.
             Use it for drawing, if provided.
     """
-
-    figxsize = 5 if slice_ is not None else 4
-
+    figxsize = 2 + int(slice_ is not None) + int(show_density) + int(show_cummulative_density)
     if ax is None:
         fig, ax = plt.subplots(1, figxsize, figsize=(4*figxsize, 4))
     else:
@@ -296,9 +297,12 @@ def combined_2d(p, levels, x=None, y=None, indexes=None, slice_=None, ax=None):
         else:
             contour_ax.axhline(slice_['value'], color='red', lw=cfg['zeroline.width'], dashes=cfg['zeroline.dash'])
         # draw slice
-        density(levels, slice_['pdf'], x if slice_['axis'] == 'x' else y, ax=next(axis_it))
-    plot_sorted_density(levels, p, ax=next(axis_it))
-    plot_cumulative_density(levels, p, ax=next(axis_it))
+        ax_density = density(levels, slice_['pdf'], x if slice_['axis'] == 'y' else y, ax=next(axis_it))
+        #ax_density.set_title('1d slice')
+    if show_density:
+        plot_sorted_density(levels, p, ax=next(axis_it))
+    if show_cummulative_density:
+        plot_cumulative_density(levels, p, ax=next(axis_it))
     contour_levels_stat(levels, p, ax=next(axis_it))
 
 
