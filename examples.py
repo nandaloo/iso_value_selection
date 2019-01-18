@@ -5,10 +5,14 @@ A collection of functions that generate a 2d support from probability density fu
 derived from data.
 """
 
+import operator
 import pandas as pd
 import numpy as np
 from scipy.stats import norm, multivariate_normal, gaussian_kde
+from matplotlib import pyplot as plt
 
+import iso_levels
+import stats
 import utils
 import plotting
 
@@ -68,6 +72,31 @@ def support_gaussian_2d(indexes=None, mu=[0.0, 0.0], sigma=[[1.0, 0], [0, 1]]):
     p = rnorm.pdf(input)
     p.shape = len(indexes[0]), len(indexes[1])
     return p
+
+
+def support_mixed_gaussian_2d(indexes, mu, sigma, weights, from_scalar=True):
+    """Return support value at indexes for specified mixture of gaussian.
+
+    Args:
+        indexes : 2d array
+            the index arrays [x_index, y_index] where to get the support values
+        mu : list of scalars, or list of list of 2-element scalars
+            means of the mixture components
+        sigma : list of scalars or list of 2d arrays of scalars
+            standard deviation of mixture components
+        weights : list of scalars
+            the weight of each component
+        from_scalar : bool, optional.
+            If True mu and sigma must be list of scalars and are automatically extended required (larger) shape.
+            Also see code.
+    """
+    if len(mu) != len(sigma) or len(sigma) != len(weights):
+        raise ValueError('mu, sigma and weights do not have equal length')
+    if from_scalar:
+        mu = [[m, 0] for m in mu]
+        sigma = [[[s, 0], [0, s]] for s in sigma]
+    p_single_2d = [support_gaussian_2d(indexes=indexes, mu=m, sigma=s) for m, s in zip(mu, sigma)]
+    return sum(map(operator.mul, weights, p_single_2d))
 
 
 def support_kde(kernel, indexes=None):
@@ -169,16 +198,84 @@ def iris_kde(kernel_bandwidth=None):
     plotting.plot_combined(p, indexes[0], indexes[1], k=[3, 5, 10])
 
 
+def broad_and_normal_gaussians(k=5):
+
+    # works well!
+    # mu = np.array([0, -5.5, 0, 5.5])
+    # sigma = np.array([1, 10, 6, 10])
+    # weights = np.array([1, 1, 0.5, 1])
+
+    # more complex and still works well
+    mu = np.array([
+        [0, 0], [-5.5, -1], [0, 0], [5.5, 2], [-3, 4]
+    ])
+    sigma = np.array([1, 10, 6, 10, 9])
+    sigma = [[[s, 0], [0, s]] for s in sigma]
+
+    weights = np.array([1, 1, 0.5, 1, 1])
+
+    indexes_2d = utils.normalize_to_indexes(low=[-10, -10], high=[10, 10], n=100)
+
+    p = support_mixed_gaussian_2d(indexes_2d, mu, sigma, weights, from_scalar=False)
+
+    levels = iso_levels.equi_prob_per_level(p, k=k)
+    levels2 = iso_levels.equi_value(p, k=k)
+
+    slice_idx = int(len(indexes_2d[1]) / 2)
+    slice_val = indexes_2d[1][slice_idx]
+    slice_ = {'axis': 'y', 'value': slice_val, 'pdf': p[slice_idx, :]}
+
+    fig, ax = plt.subplots(2, 3, figsize=(3 * 5, 8))
+    plotting.combined_2d(p, levels2, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[0])
+    plotting.combined_2d(p, levels, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[1])
+    fig.show()
+
+
+def plateau(k=5):
+    factor = 2.3
+
+    mu = np.array([-0.5, 1, 3.5, 7, 6])-3
+    sigma = np.array([0.05, 0.5, 0.2, 2, 0.3])*1.2
+    weights = np.array([0.2, 1, 0.4, 1, 3])
+    indexes_2d = utils.normalize_to_indexes(low=[-10, -10], high=[10, 10], n=100)
+
+    # mu = [0]
+    # sigma = [1]
+    # weights = [1]
+    # indexes_2d = utils.normalize_to_indexes(low=[-4, -4], high=[4, 4], n=100)
+
+    p = support_mixed_gaussian_2d(indexes_2d, mu, sigma, weights)
+
+    # raise p value
+    p_raised = p + np.max(p)*factor
+
+    # apply a circular 0--1 function
+    for ix,x in enumerate(indexes_2d[0]):
+        for iy,y in enumerate(indexes_2d[1]):
+            if x*x + y*y > 32:
+                p_raised[ix][iy] = 0
+
+    # plot
+    #plotting.plot_combined(p_raised, indexes=indexes_2d, k=[3,7,10])
+
+    levels = iso_levels.equi_prob_per_level(p_raised, k=k)
+    levels2 = iso_levels.equi_value(p_raised, k=k)
+
+    slice_idx = int(len(indexes_2d[1]) / 2)
+    slice_val = indexes_2d[1][slice_idx]
+    slice_ = {'axis': 'y', 'value': slice_val, 'pdf': p_raised[slice_idx, :]}
+
+    fig, ax = plt.subplots(2, 3, figsize=(3 * 5, 8))
+    plotting.combined_2d(p_raised, levels2, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[0])
+    plotting.combined_2d(p_raised, levels, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[1])
+    fig.show()
+
+
 def basic_idea():
     """Creates plot for initial explanatory and motivating example for paper.
 
     Also provide some search capabilities, i.e. allows to play with parameters to find exemplary distributions.
     """
-    import operator
-    from matplotlib import pyplot as plt
-
-    import iso_levels
-    import stats
 
     mu = [0, 1, 3.5, 7]
     sigma = [0.05, 0.5, 0.7, 2]
@@ -203,8 +300,7 @@ def basic_idea():
     fig.show()
 
     indexes_2d = utils.normalize_to_indexes(low=[-1, -3], high=[10, 3], n=100)
-    p_single_2d = [support_gaussian_2d(indexes=indexes_2d, mu=[m, 0], sigma=[[s, 0], [0, s]]) for m, s in zip(mu, sigma)]
-    p_mixture_2d = sum(map(operator.mul, weights, p_single_2d))
+    p_mixture_2d = support_mixed_gaussian_2d(indexes_2d, mu, sigma, weights)
 
     levels = iso_levels.equi_prob_per_level(p_mixture_2d, k=7)
     levels2 = iso_levels.equi_value(p_mixture_2d, k=7)
@@ -224,8 +320,6 @@ def basic_idea():
 
     plotting.combined_2d(p_mixture_2d, levels2, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[0])
     plotting.combined_2d(p_mixture_2d, levels, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[1])
-    #plotting.combined_2d(p_mixture_2d, levels2, x=indexes_2d[0], y=indexes_2d[1], ax=ax[0])
-    #plotting.combined_2d(p_mixture_2d, levels, x=indexes_2d[0], y=indexes_2d[1], ax=ax[1])
     fig.show()
 
 
@@ -238,4 +332,6 @@ if __name__ == '__main__':
     # gausssian_2d_three_gaussians()
     # allbus()
     # titanic()
-    basic_idea()
+    #basic_idea()
+    # plateau()
+    broad_and_normal_gaussians()
