@@ -307,17 +307,33 @@ def combined_2d(p, levels, x=None, y=None, indexes=None, slice_=None, ax=None, s
     contour_levels_stat(levels, p, ax=next(axis_it))
 
 
-def combined_1d(p, levels, index=None, ax=None):
+def combined_1d(p, levels, index=None, ax=None, show_density=True, show_cummulative_density=False):
+    figxsize = 2 + int(show_density) + int(show_cummulative_density)
     if ax is None:
-        fig, ax = plt.subplots(1,4, figsize=(18, 4))
+        fig, ax = plt.subplots(1, figxsize, figsize=(4*figxsize, 4))
     else:
-        assert(len(ax) >= 4), "require at least 4 axis objects"
+        assert(len(ax) >= figxsize)
+
+    # if ax is None:
+    #     fig, ax = plt.subplots(1,4, figsize=(18, 4))
+    # else:
+    #     assert(len(ax) >= 4), "require at least 4 axis objects"
     #p, x, y = _validate_infer_indexes(p, x=index)
 
-    density(levels, p, index, ax=ax[0])
-    plot_sorted_density(levels, p, ax=ax[1])
-    plot_cumulative_density(levels, p, ax=ax[2])
-    contour_levels_stat(levels, p, ax=ax[3])
+    axis_it = iter(ax)
+    density(levels, p, index, ax=next(axis_it))
+    if show_density:
+        plot_sorted_density(levels, p, ax=next(axis_it))
+    if show_cummulative_density:
+        plot_cumulative_density(levels, p, ax=next(axis_it))
+    contour_levels_stat(levels, p, ax=next(axis_it))
+
+    #density(levels, p, index, ax=ax[0])
+    #plot_sorted_density(levels, p, ax=ax[1])
+    #plot_cumulative_density(levels, p, ax=ax[2])
+    #contour_levels_stat(levels, p, ax=ax[3])
+
+
 
 
 def plot_combined(p, x=None, y=None, indexes=None, k=iso_levels.DEFAULT_K):

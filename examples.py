@@ -158,7 +158,6 @@ def gaussian_1d():
 def allbus():
     df = pd.read_csv('./data/allbus_age-vs-income.csv', index_col=False)
     allbus_p = df['p'].values
-
     plotting.plot_combined(allbus_p, k=[3, 5, 7, 10])
 
 
@@ -190,7 +189,7 @@ def data_file_with_kde(filepath, kernel_bandwidth=None, k=7, usecols=None, index
     # get index of max
     max_idx = np.unravel_index(np.argmax(p, axis=None), p.shape)
     slice_ = utils.get_slice(p, indexes, 'y', indexes[1][max_idx[0]])
-    slice_ = utils.get_slice(p, indexes, 'y', 68)
+    #slice_ = utils.get_slice(p, indexes, 'y', 68)
 
     # print('old embrace ratio: {}'.format(stats.embrace_ratio(levels2, p)))
     # print('new embrace ratio: {}'.format(stats.embrace_ratio(levels, p)))
@@ -200,6 +199,7 @@ def data_file_with_kde(filepath, kernel_bandwidth=None, k=7, usecols=None, index
     plotting.combined_2d(p, levels2, x=indexes[0], y=indexes[1], slice_=slice_, ax=ax[0])
     plotting.combined_2d(p, levels, x=indexes[0], y=indexes[1], slice_=slice_, ax=ax[1])
     fig.show()
+    return fig
 
 
 def titanic_kde(kernel_bandwidth=None):
@@ -245,6 +245,7 @@ def iris_kde(kernel_bandwidth=None, k=6):
     plotting.combined_2d(p, levels2, x=indexes[0], y=indexes[1], slice_=slice_, ax=ax[0])
     plotting.combined_2d(p, levels, x=indexes[0], y=indexes[1], slice_=slice_, ax=ax[1])
     fig.show()
+    return fig
 
 
 def broad_and_normal_gaussians(k=5):
@@ -276,6 +277,7 @@ def broad_and_normal_gaussians(k=5):
     plotting.combined_2d(p, levels2, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[0])
     plotting.combined_2d(p, levels, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[1])
     fig.show()
+    return fig
 
 
 def plateau(k=5):
@@ -314,6 +316,7 @@ def plateau(k=5):
     plotting.combined_2d(p_raised, levels2, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[0])
     plotting.combined_2d(p_raised, levels, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[1])
     fig.show()
+    return fig
 
 
 def basic_idea():
@@ -339,10 +342,10 @@ def basic_idea():
     # ax = figure.add_subplot(122)
     # plotting.density(levels2, gp1d, ax=ax)
 
-    fig, ax = plt.subplots(2, 4, figsize=(18, 8))
+    fig1d, ax = plt.subplots(2, 3, figsize=(3*5, 8))
     plotting.combined_1d(p_mixture_1d, levels2, index_1d, ax[0])
     plotting.combined_1d(p_mixture_1d, levels, index_1d, ax[1])
-    fig.show()
+    fig1d.show()
 
     indexes_2d = utils.normalize_to_indexes(low=[-1, -3], high=[10, 3], n=100)
     p_mixture_2d = support_mixed_gaussian_2d(indexes_2d, mu, sigma, weights)
@@ -361,12 +364,12 @@ def basic_idea():
     #plotting.plot_combined(gp2d, indexes=gindex, k=list(range(2,10)))
     #plotting.plot_combined(gp2d, indexes=gindex, k=[7])
 
-    fig, ax = plt.subplots(2, 3, figsize=(3*5, 8))
+    fig2d, ax = plt.subplots(2, 3, figsize=(3*5, 8))
 
     plotting.combined_2d(p_mixture_2d, levels2, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[0])
     plotting.combined_2d(p_mixture_2d, levels, x=indexes_2d[0], y=indexes_2d[1], slice_=slice_, ax=ax[1])
-    fig.show()
-
+    fig2d.show()
+    return fig1d, fig2d
 
 if __name__ == '__main__':
 
@@ -379,13 +382,16 @@ if __name__ == '__main__':
     #titanic()
     #titanic_kde(0.15)
 
-    # basic_idea()
-    # plateau()
-    # broad_and_normal_gaussians()
-    # data_file_with_kde('./data/nnc_z_min-linearity.csv', kernel_bandwidth=0.12)
-    data_file_with_kde('~/Downloads/data.csv', kernel_bandwidth=0.10, k=6)
+    #basic_idea()
+    #for i,fig in enumerate(basic_idea()):
+    #    fig.savefig("basic_idea_{}d.pdf".format(i+1))
+    #plateau().savefig("plateau.pdf")
+    #broad_and_normal_gaussians().savefig("broad_normal_gaussian.pdf")
+    #data_file_with_kde('./data/nnc_z_min-linearity.csv', kernel_bandwidth=0.12).savefig("nnc_z_min-linearity.pdf")  # slice at maximum p
 
-    # iris_kde(0.15, k=5)
+    #data_file_with_kde('~/Downloads/data.csv', kernel_bandwidth=0.10, k=6)
+
+    iris_kde(0.15, k=5).savefig('iris_kde.pdf')
     # football works, but it's a bit to normal...
     # data_file_with_kde('./data/football_careergoals-vs-topspeed.csv', kernel_bandwidth=0.10, k=6)  # with slice at y = 60
 
