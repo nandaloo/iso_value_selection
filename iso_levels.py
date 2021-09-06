@@ -3,6 +3,7 @@ Copyright 2018 Philipp Lucas, philipp.lucas@dlr.de
 
 A collection of algorithms to derive contour levels.
 """
+import logging
 
 import numpy as np
 import pandas as pd
@@ -48,7 +49,31 @@ def _validate_normalize_levels(levels, k, remove_double_levels=False):
     return levels
 
 
-def equi_value(data, k=DEFAULT_K):
+def _get_level_positions(max_value, equal_spaced_level: int=DEFAULT_K, custom_spaced_level: list=None):
+    """ Calculate the position of level depending on if k is given or relative_level
+                        when a list of values between 0 and 1 are given the levels are relative to those
+                        when a number is given it spaces the level equidistant
+
+    Args:
+        max_value: max value of the target-distribution
+
+        k: number of iso level when they are supposed to be equally distributed
+
+        custom_spaced_level: relative positions of the level when they should be customized
+
+    Returns:
+        A sequence of level positions in increased order
+    """
+    if isinstance(custom_spaced_level, list):
+        if min(custom_spaced_level) >= 0. and max(custom_spaced_level) <= 1.:
+            return [x * max_value for x in custom_spaced_level]
+        else:
+            logging.warning(f"[{min(custom_spaced_level)}, ... ,{max(custom_spaced_level)}] not in 0-1. \n"
+                            f"Setting iso level equal spaced: {equal_spaced_level}")
+    return np.linspace(0, max_value, equal_spaced_level + 2)[1:-1]
+
+
+def equi_value(data, k=DEFAULT_K, custom_spaced_level=None):
     """The standard algorithm to determine contour levels: chose levels equidistantly along the value axis.
 
     Args:
@@ -60,6 +85,11 @@ def equi_value(data, k=DEFAULT_K):
         k : integer
             The number of levels to return.
 
+        custom_spaced_level : list
+            A list of values between 0 and 1 which give a relative position of the iso level by distance. This somehow
+            removes the logic of equi_value, but makes sense to me because I can do the same with the other methods.
+            E.g. for equi_prob_per_level I can set custom probability distances between lines.
+
     Returns:
         A sequence of k levels in increasing order.
     """
@@ -67,11 +97,11 @@ def equi_value(data, k=DEFAULT_K):
         raise ValueError("k must be at least 1")
     data = _validate_normalize_data(data)
     #levels = np.linspace(np.min(data), np.max(data), k+2)[1:-1]
-    levels = np.linspace(0, np.max(data), k + 2)[1:-1]
+    levels = _get_level_positions(np.max(data), k, custom_spaced_level)
     return _validate_normalize_levels(levels, k)
 
 
-def equi_prob_per_level(data, k=DEFAULT_K):
+def equi_prob_per_level(data, k=DEFAULT_K, custom_spaced_level=None):
     """Return k contour levels for provided array-like density values such that the combined area between two adjacent
     levels in a contour plot covers an equal volume (probability) of the density function.
 
@@ -85,6 +115,12 @@ def equi_prob_per_level(data, k=DEFAULT_K):
 
         k : integer
             The number of levels to return.
+
+        custom_spaced_level : list
+            A list of values between 0 and 1 which give a relative position of the iso level by probability. This somehow
+            removes the logic of equi_prob_per_level, but makes sense to me because I can do the same with the other
+            methods.
+            E.g. for equi_value I can set custom distances between lines.
 
     Returns:
         A sequence of k levels in increasing order.
@@ -113,7 +149,7 @@ def equi_prob_per_level(data, k=DEFAULT_K):
     df = df.drop_duplicates(subset='pdf', keep='last')
 
     # level targets
-    level_targets = np.linspace(0, 1, k + 2)[1:-1]
+    level_targets = _get_level_positions(1, k, custom_spaced_level)
 
     # indices of corresponding pdf values that make us exceed 1/k probability
     indices = df['cum_prob'].searchsorted(level_targets, side='left')
@@ -135,7 +171,7 @@ def equi_prob_per_level(data, k=DEFAULT_K):
     return _validate_normalize_levels(levels, k)
 
 
-def equi_horizontal_prob_per_level(data, k=DEFAULT_K):
+def equi_horizontal_prob_per_level(data, k=DEFAULT_K, custom_spaced_level=None):
     """Return `k` contour levels provided array-like density values such that
      the increase from one level to the next one covers an equal volume of the density function.
 
@@ -152,6 +188,12 @@ def equi_horizontal_prob_per_level(data, k=DEFAULT_K):
         k : integer
             The number of levels to return.
 
+        custom_spaced_level : list
+            A list of values between 0 and 1 which give a relative position of the iso level by probability. This somehow
+            removes the logic of equi_prob_per_level, but makes sense to me because I can do the same with the other
+            methods.
+            E.g. for equi_value I can set custom distances between lines.
+
     Returns:
         A sequence of k levels in increasing order.
     """
@@ -161,7 +203,7 @@ def equi_horizontal_prob_per_level(data, k=DEFAULT_K):
     pdf = _validate_normalize_data(data)
 
     # 1. get level targets
-    level_targets = np.linspace(0, 1, k + 2)[1:-1]
+    level_targets = _get_level_positions(1, k, custom_spaced_level)
 
     # 2. order by density
     pdf_sorted = np.sort(pdf)
